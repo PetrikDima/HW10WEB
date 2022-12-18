@@ -1,105 +1,128 @@
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import joinedload
-
-from database.db import session
 from models.note_models import Note, Archive, Tag
+
+NOTES = Note.objects
+ARCHIVE = Archive.objects
 
 
 def add_note(text):
-    note = Note(description=text)
-    session.add(note)
-    session.commit()
+    counter = 0
+    if not Note.objects and Archive.objects:
+        for a in Archive.objects:
+            if counter < a.id_count:
+                counter = a.id_count
+    if not Archive.objects and Note.objects:
+        for n in Note.objects:
+            if counter < n.id_count:
+                counter = n.id_count
+    if Archive.objects and Note.objects:
+        for a in Archive.objects:
+            for n in Note.objects:
+                if a.id_count > n.id_count:
+                    counter = a.id_count
+                else:
+                    counter = n.id_count
+    if not Note.objects and not Archive.objects:
+        counter = 0
+    note = Note(id_count=counter + 1,
+                text=text)
+    note.save()
 
 
 def change_note(id_, text):
-    sel = session.query(Note).filter(Note.id == id_).one()
-    sel.description = text
-    session.commit()
+    for note in NOTES:
+        if note.id_count == id_:
+            note.update(text=text)
+            print(f'Successful change note with id: {id_}')
 
 
 def del_note(id_):
-    session.query(Note).filter(Note.id == id_).delete()
-    session.commit()
+    for note in NOTES:
+        if note.id_count == id_:
+            note.delete()
+            print(f'Successful delete note with id: {id_}')
 
 
 def add_date(id_, date):
-    sel = session.query(Note).filter(Note.id == id_).one()
-    sel.date = date
-    session.commit()
+    for note in NOTES:
+        if note.id_count == id_:
+            note.update(created=date)
+            print(f'Successful add date to note with id: {id_}')
 
 
 def show_all():
-    sel = session.query(Note).all()
-    return sel
+    return NOTES
 
 
 def done_note(id_):
-    try:
-        session.query(Archive).filter(Archive.id == id_).one()
-        print(f'Note with id: {id_} in archives')
-    except NoResultFound:
-        print('Note not in archives')
-    try:
-        sel_note = session.query(Note).options(joinedload('tags')).filter(Note.id == id_).one()
-        arc = Archive(id=sel_note.id,
-                      description=sel_note.description,
-                      tag=sel_note.tags)
-        print(f'Note with id: {id_} added to archives')
-        session.query(Note).filter(Note.id == id_).delete()
-        session.add(arc)
-        session.commit()
-    except NoResultFound:
-        print('Note not in notes')
+    notes = Note.objects
+    for note in notes:
+        if note.id_count == id_:
+            arch = Archive(id_count=note.id_count, text=note.text, tags=note.tags)
+            arch.save()
+            note.delete()
 
 
-def show_archived():
-    sel = session.query(Archive).all()
-    return sel
+def show_archive():
+    return ARCHIVE
 
 
-def find_note():
-    sel = session.query(Note).all()
-    return sel
+def find_note(text):
+    som_st = ' '.join(text)
+    for n in NOTES:
+        created = n.created.strftime("%Y-%m-%d %H:%M:%S")
+        if som_st in n.text or som_st in created:
+            print(f'Note: {n.id_count}, text: {n.text}, created: {n.created}')
 
 
 def return_note(id_):
-    sel_arc = session.query(Archive).filter(Archive.id == id_).one()
-    print(type(sel_arc.tag))
-    note = Note(id=sel_arc.id,
-                description=sel_arc.description)
-    session.add(note)
-    session.query(Archive).filter(Archive.id == id_).delete()
-    session.commit()
+    for a in ARCHIVE:
+        if a.id_count == id_:
+            note = Note(id_count=a.id_count,
+                        text=a.text,
+                        tags=a.tags)
+            note.save()
+            a.delete()
+            print(f'Successful return note with id: {id_}')
 
 
 def add_tag(id_, tags):
     list_tags = []
-    for i in tags:
-        sel_tag = Tag(id=id_, tag=i)
-        list_tags.append(sel_tag)
-    note_ = session.query(Note).options(joinedload('tags')).filter(Note.id == id_).one()
-    note_.tags = list_tags
-    session.add(note_)
-    session.commit()
+    [list_tags.append(i) for i in tags]
+    for n in Note.objects:
+        if n.id_count == id_:
+            tag = Tag(id_count=id_, tags=list_tags)
+            tag.save()
+            note = Note(id_count=id_,
+                        text=n.text,
+                        tags=tag)
+            note.save()
+            n.delete()
+
+
+def clear_all():
+    notes = Note.objects
+    for n in notes:
+        n.delete()
 
 
 def find_tag(tag):
-    notes_ = session.query(Note).options(joinedload('tags')).all()
-    for n in notes_:
-        for i in n.tags:
-            if tag.title() in i.tag:
-                print(f'---------------------------------------------------------\n'
-                      f'Note id: {n.id}, date: {n.created}, done: {bool(n.done)}\n'
-                      f'Text: {n.description}\n'
-                      f'Tags: {i.tag}\n'
+    str_tag = ' '.join(tag)
+    print(str_tag)
+    for n in NOTES:
+        print('1')
+        for i in n.tags.tags:
+            print(i)
+            if str_tag.lower() in i.lower():
+                print(f'Note id: {n.id_count}, date: {n.created.date()}, done: {n.done}\n'
+                      f'Text: {n.text}\n'
+                      f'Tags: {n.tags.tags}\n'
                       f'---------------------------------------------------------\n')
-    session.commit()
 
 
 def show_date(date1, date2):
-    notes_ = session.query(Note).all()
-    for n in notes_:
+    for n in NOTES:
+        print(n.created)
         if date1.value <= n.created <= date2.value:
-            print(f'Id: {n.id}, date: {n.created}')
+            print(f'Id: {n.id_count}, date: {n.created.date()}')
         else:
             print(f'Not find notes with this date')

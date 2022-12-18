@@ -1,42 +1,31 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Table
-from sqlalchemy.orm import relationship
+import redis
+from mongoengine import connect, IntField, Document, StringField, ListField, BooleanField, DateTimeField, ReferenceField, CASCADE
+from redis_lru import RedisLRU
 
-from database.db import Base, session, engine
+from database.db import URL
 
-
-association_table = Table(
-    "tag_to_notes",
-    Base.metadata,
-    Column("notes_id", ForeignKey("notes.id")),
-    Column("tags_id", ForeignKey("tags.id")),
-)
+conn = connect(host=URL)
+client = redis.StrictRedis(host='localhost', port=6379, password=None)
+cache = RedisLRU(client)
 
 
-class Note(Base):
-    __tablename__ = "notes"
-    id = Column(Integer, primary_key=True)
-    description = Column(String(200), nullable=False)
-    done = Column(Boolean, default=False)
-    created = Column(DateTime, default=datetime.now())
-    tags = relationship("Tag", secondary=association_table, back_populates="notes")
+class Tag(Document):
+    id_count = IntField()
+    tags = ListField(StringField(max_length=80))
 
 
-class Tag(Base):
-    __tablename__ = "tags"
-    id = Column(Integer, primary_key=True)
-    tag = Column(String(60), nullable=False, unique=True)
-    notes = relationship("Note", secondary=association_table, back_populates="tags")
+class Note(Document):
+    id_count = IntField()
+    text = StringField(max_length=1000)
+    done = BooleanField(default=False)
+    created = DateTimeField(default=datetime.now())
+    tags = ReferenceField(Tag, reverse_delete_rule=CASCADE, dbref=True)
 
 
-class Archive(Base):
-    __tablename__ = "archives"
-    id = Column(Integer, primary_key=True)
-    description = Column(String(200), nullable=False)
-    transferred = Column(DateTime, default=datetime.now())
-    tag = Column(String(60), nullable=False)
-
-
-Base.metadata.create_all(engine)
-Base.metadata.bind = engine, session
+class Archive(Document):
+    id_count = IntField()
+    text = StringField(max_length=1000)
+    transferred = DateTimeField(default=datetime.now())
+    tags = ReferenceField(Tag, reverse_delete_rule=CASCADE, dbref=True)

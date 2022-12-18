@@ -1,112 +1,89 @@
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy import and_
-import models.ab_models as mod
-from database.db import session
+from models.ab_models import Addressbook
 
 
-class Decorator:
-    def __init__(self, func) -> None:
-        self.func = func
-
-    def __call__(self, *args):
-        try:
-            return self.func(*args)
-        except NoResultFound:
-            print('Not found this command')
+USERS = Addressbook.objects
 
 
-@Decorator
 def insert_addressbook(name, phone, birthday, emails, address):
-    emails_str = ''
-    for i in emails:
-        emails_str += i.value + ' '
-    ab_ = mod.AddressBook(
-        name=name.value,
-        phone=phone.value,
-        birthday=birthday.value,
-        email=emails_str,
-        address=address.value
+    ab_ = Addressbook(
+        name=name,
+        phone=phone,
+        birthday=birthday,
+        email=emails,
+        address=address
     )
-    session.add(ab_)
-    session.commit()
+    ab_.save()
 
 
-@Decorator
 def remove_all():
-    session.query(mod.AddressBook).filter(mod.AddressBook.id != 0).delete()
-    session.commit()
+    for user in USERS:
+        user.delete()
 
 
-@Decorator
 def remove_user(name):
-    session.query(mod.AddressBook).filter(mod.AddressBook.name == name).delete()
-    session.commit()
+    for user in USERS:
+        if user.name == name:
+            user.delete()
 
 
-@Decorator
 def add_email(name, email):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    sel.email = email
+    for user in USERS:
+        if user.name == name and user.email is not None:
+            user.update(email=email)
+        else:
+            print('Email already exists')
 
 
-@Decorator
 def show_all():
-    users = session.query(mod.AddressBook).all()
-    return users
+    return USERS
 
 
-@Decorator
 def change_contact(name, old, new):
-    old_data = session.query(mod.AddressBook).filter(and_(mod.AddressBook.phone == old, mod.AddressBook.name == name)).one()
-    old_data.phone = new
-    session.commit()
+    for user in USERS:
+        if user.name == name and user.phone == old:
+            user.update(phone=new)
 
 
-@Decorator
 def show_phone(name):
-    user = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    return user.phone
+    for user in USERS:
+        if user.name == name:
+            return user.phone
 
 
-@Decorator
 def del_phone(name):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    sel.phone = None
-    session.commit()
+    for user in USERS:
+        if user.name == name:
+            if user.phone is not None:
+                user.phone = None
 
 
-@Decorator
 def add_birthday(name, birthday):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    sel.birthday = birthday
-    session.commit()
+    for user in USERS:
+        if user.name == name and user.birthday is None:
+            user.update(birthday=birthday)
 
 
-@Decorator
 def find_user(name):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    session.commit()
-    return sel.birthday
+    for user in USERS:
+        if user.name == name:
+            return user.birthday
 
 
-@Decorator
 def del_email(name):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    sel.email = None
-    session.commit()
+    for user in USERS:
+        if user.name == name:
+            user.update(email=None)
 
 
-@Decorator
 def add_address(name, address):
-    sel = session.query(mod.AddressBook).filter(mod.AddressBook.name == name).one()
-    sel.address = address
+    for user in USERS:
+        if user.name == name:
+            user.update(address=address)
 
 
-@Decorator
 def find_something(som):
-    sel = session.query(mod.AddressBook).all()
     som_st = ' '.join(som)
-    for s in sel:
+    for s in USERS:
         birthday = s.birthday.strftime("%Y-%m-%d")
         if som_st in s.name or som_st in s.phone or som_st in birthday or som_st in s.email or som_st in s.address:
             print(f'User {s.name}, phone: {s.phone}, birthday: {s.birthday}, email: {s.email}, address: {s.address}')

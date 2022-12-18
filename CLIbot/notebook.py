@@ -118,7 +118,7 @@ def add_date(*args):
     print(f'Successful add date to note {id_note}')
 
 
-def show_all(*args):
+def show_all():
     """Повертає всі нотатки"""
     sel = dml.show_all()
     for s in sel:
@@ -128,7 +128,7 @@ def show_all(*args):
               f'---------------------------------------------------------\n')
 
 
-def show_archive(*args):
+def show_archive():
     """Повертає нотатки з архіву"""
     sel = dml.show_archived()
     for s in sel:
@@ -164,7 +164,9 @@ def show_date(*args):
 def done_note(*args):
     """Помічає нотатку як виконану"""
     id_note = int(args[0])
+    id_note = int(args[0])
     dml.done_note(id_note)
+    print(f'Note with id: {id_note} added to archive')
 
 
 @InputError

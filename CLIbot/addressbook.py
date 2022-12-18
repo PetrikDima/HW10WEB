@@ -185,24 +185,30 @@ def salute():
 
 # @InputError
 def add_contact(*args):
+
     name = Name(args[0])
     phone = Phone(args[1])
     birthday = None
-    emails = []
-    address = None
+    email = ''
+    address = ''
     if len(args) > 2:
         birthday = Birthday(args[2])
     if len(args) > 3:
-        emails = [Email(args[3])]
+        email = Email(args[3])
     if len(args) > 4:
         address = Address(" ".join(args[4:]))
     if len(args) <= 2:
-        birthday = Birthday(None)
+        birthday = None
     if len(args) <= 3:
-        emails = []
+        email = ''
     if len(args) <= 4:
-        address = Address(None)
-    dml.insert_addressbook(name, phone, birthday, emails, address)
+        address = ''
+    if birthday is None and email == '' and address == '':
+        dml.insert_addressbook(name.value, phone.value, birthday, email, address)
+    if birthday is not None and email == '' and address == '':
+        dml.insert_addressbook(name.value, phone.value, datetime.strftime(birthday.value, '%Y-%m-%d'), email, address)
+    if birthday is not None and email != '' and address == '':
+        dml.insert_addressbook(name.value, phone.value, datetime.strftime(birthday.value, '%Y-%m-%d'), email.value, address)
     print(f'add user {name} into database')
 
 
