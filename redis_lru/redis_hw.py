@@ -5,11 +5,19 @@ client = redis.StrictRedis(host="localhost", port=6379, password=None)
 cache = RedisLRU(client)
 
 
+def factorial(x):
+    if x == 1:
+        return 1
+    else:
+        return x * factorial(x-1)
+
+
 @cache
-def f(x):
-    print(f"Виклик функції f({x})")
-    return x
+def factorial(x):
+    if x == 1:
+        return 1
+    else:
+        return x * factorial(x-1)
 
 
-f(3)
-f(3)
+print(factorial(5))
